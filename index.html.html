@@ -1,0 +1,510 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0B1120">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ล่ามเสียง — แปลเป็นไทย</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Thai:wght@400;500;600&display=swap');
+
+  :root{
+    --bg: #0B1120;
+    --panel: #131B2E;
+    --panel-2: #1A2338;
+    --line: #232D45;
+    --src: #4CC9F0;
+    --out: #F4A950;
+    --text: #EDEFF7;
+    --muted: #8B93A7;
+    --alert: #F2545B;
+    --ok: #6FCF97;
+  }
+
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{margin:0; padding:0; height:100%;}
+  body{
+    background: radial-gradient(ellipse at top, #101a30 0%, var(--bg) 60%);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    padding: env(safe-area-inset-top,20px) 14px calc(env(safe-area-inset-bottom,20px) + 20px);
+  }
+
+  .app{ width:100%; max-width: 460px; display:flex; flex-direction:column; min-height: 100vh; }
+
+  header{ text-align:center; padding: 10px 0 16px; position:relative; }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing: 0.18em;
+    color: var(--muted); text-transform: uppercase;
+  }
+  h1{
+    font-family:'Space Grotesk', sans-serif; font-size: 24px; margin: 6px 0 0;
+    font-weight: 700; letter-spacing: -0.01em;
+  }
+  h1 .th{ font-family:'Noto Sans Thai', sans-serif; color: var(--out); }
+
+  #installBtn{
+    display:none;
+    margin: 12px auto 0;
+    background: var(--panel-2);
+    border: 1px solid var(--out);
+    color: var(--out);
+    font-family: 'Inter'; font-size: 12.5px; font-weight:600;
+    padding: 8px 16px; border-radius: 20px; cursor:pointer;
+  }
+
+  /* Language chips */
+  .lang-chips{
+    display:flex; gap:8px; margin-bottom: 14px;
+  }
+  .chip{
+    flex:1;
+    background: var(--panel);
+    border: 1.5px solid var(--line);
+    color: var(--muted);
+    font-family:'Inter'; font-weight:600; font-size: 13.5px;
+    padding: 12px 6px;
+    border-radius: 12px;
+    text-align:center;
+    cursor:pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+    user-select:none;
+  }
+  .chip .flag{ display:block; font-size:18px; margin-bottom:3px; }
+  .chip.active{
+    border-color: var(--src);
+    color: var(--text);
+    background: linear-gradient(160deg, rgba(76,201,240,0.18), rgba(76,201,240,0.04));
+  }
+
+  .mode-row{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin-bottom: 14px;
+  }
+  .mode-toggle{
+    display:flex; align-items:center; gap:8px;
+    background: var(--panel); border: 1px solid var(--line);
+    padding: 7px 14px; border-radius: 20px; cursor:pointer;
+  }
+  .mode-toggle .knob-sm{
+    width:15px; height:15px; border-radius:50%; background: var(--muted);
+    transition: background 0.15s;
+  }
+  .mode-toggle.on .knob-sm{ background: var(--ok); }
+  .mode-toggle span{ font-size:12px; color: var(--muted); }
+
+  /* Mic stage */
+  .stage{ position:relative; height: 176px; display:flex; align-items:center; justify-content:center; }
+  .ring{ position:absolute; border-radius:50%; border: 1.5px solid var(--src); opacity:0; }
+  .stage.listening .ring{ animation: pulse 2.2s ease-out infinite; }
+  .ring:nth-child(1){ width:100px; height:100px; animation-delay:0s;}
+  .ring:nth-child(2){ width:100px; height:100px; animation-delay:0.7s;}
+  .ring:nth-child(3){ width:100px; height:100px; animation-delay:1.4s;}
+  @keyframes pulse{ 0%{ width:100px; height:100px; opacity:0.55; } 100%{ width:180px; height:180px; opacity:0; } }
+
+  #micBtn{
+    position:relative; z-index:2; width: 82px; height: 82px; border-radius:50%; border: none;
+    background: linear-gradient(160deg, var(--src) 0%, #2f8fae 100%);
+    display:flex; align-items:center; justify-content:center; cursor:pointer;
+    box-shadow: 0 6px 24px rgba(76,201,240,0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  #micBtn:active{ transform: scale(0.96); }
+  #micBtn.on{ background: linear-gradient(160deg, var(--alert) 0%, #a13036 100%); box-shadow: 0 6px 24px rgba(242,84,91,0.3); }
+  #micBtn:focus-visible{ outline: 3px solid var(--out); outline-offset: 4px; }
+  #micBtn svg{ width:30px; height:30px; }
+
+  .status{
+    text-align:center; font-family:'IBM Plex Mono', monospace; font-size: 12px;
+    color: var(--muted); min-height: 18px; margin-bottom: 10px;
+  }
+  .status.err{ color: var(--alert); }
+  .status.ok{ color: var(--ok); }
+
+  /* Live panels */
+  .panel{ background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; min-height: 66px; }
+  .panel-head{ display:flex; align-items:center; gap:7px; margin-bottom: 7px; }
+  .dot{ width:7px; height:7px; border-radius:50%; }
+  .panel-label{ font-family:'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .src .dot{ background: var(--src); }
+  .out .dot{ background: var(--out); }
+  .panel-text{ font-size: 15.5px; line-height: 1.55; color: var(--text); word-break: break-word; }
+  .out .panel-text{ font-family:'Noto Sans Thai', sans-serif; font-size: 16.5px; color: #FBE3BE; }
+  .placeholder{ color: var(--muted); font-style: italic; }
+
+  .flow-arrow{ display:flex; justify-content:center; margin: -3px 0 3px; color: var(--muted); font-size: 12px; }
+
+  .controls{ display:flex; align-items:center; justify-content:space-between; margin: 8px 0 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .toggle-row{ display:flex; align-items:center; gap:9px; }
+  .toggle-label{ font-size: 12.5px; color: var(--muted); }
+  .switch{ width: 38px; height: 22px; background: var(--panel-2); border: 1px solid var(--line); border-radius: 20px; position:relative; cursor:pointer; }
+  .switch .knob{ position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background: var(--muted); transition: transform 0.15s ease, background 0.15s ease; }
+  .switch.on{ border-color: var(--out); }
+  .switch.on .knob{ transform: translateX(16px); background: var(--out); }
+
+  .clear-btn{ background:none; border: 1px solid var(--line); color: var(--muted); font-size: 11.5px; font-family: 'Inter'; padding: 7px 12px; border-radius: 8px; cursor:pointer; }
+  .clear-btn:hover{ color: var(--text); border-color: var(--muted); }
+
+  /* History */
+  .history-head{ display:flex; align-items:center; justify-content:space-between; margin: 4px 0 8px; }
+  .history-head .panel-label{ font-size:10.5px; }
+  #copyBtn{ background:none; border:1px solid var(--line); color:var(--muted); font-size:11px; padding:5px 10px; border-radius:8px; cursor:pointer; font-family:'Inter'; }
+  #copyBtn:hover{ color: var(--text); border-color: var(--muted); }
+  .history{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-bottom:10px; }
+  .h-item{ background: var(--panel-2); border:1px solid var(--line); border-radius:12px; padding:10px 12px; }
+  .h-item .h-src{ font-size:13px; color: var(--src); margin-bottom:3px; }
+  .h-item .h-out{ font-family:'Noto Sans Thai', sans-serif; font-size:14.5px; color: var(--out); }
+  .h-item .h-meta{ font-family:'IBM Plex Mono', monospace; font-size:9px; color:var(--muted); margin-top:4px; }
+  .h-empty{ text-align:center; color:var(--muted); font-size:12.5px; font-style:italic; padding: 10px 0; }
+
+  .footnote{ text-align:center; font-size: 11px; color: var(--muted); margin-top: 10px; line-height:1.6; }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="eyebrow">VOICE → THAI · REAL-TIME</div>
+    <h1>ล่ามเสียง<span class="th"> สด</span></h1>
+    <button id="installBtn">⬇ ติดตั้งลงหน้าจอโฮม</button>
+  </header>
+
+  <div class="lang-chips">
+    <div class="chip active" data-lang="en-US"><span class="flag">EN</span>English</div>
+    <div class="chip" data-lang="zh-CN"><span class="flag">中</span>Chinese</div>
+    <div class="chip" data-lang="my-MM"><span class="flag">MM</span>Burmese</div>
+  </div>
+
+  <div class="mode-row">
+    <div class="mode-toggle" id="autoToggle">
+      <div class="knob-sm"></div>
+      <span>สลับภาษาอัตโนมัติเมื่อไม่ได้ยิน</span>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <div class="ring"></div><div class="ring"></div><div class="ring"></div>
+    <button id="micBtn" aria-label="เริ่มฟัง">
+      <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+        <line x1="12" y1="19" x2="12" y2="23"></line>
+        <line x1="8" y1="23" x2="16" y2="23"></line>
+      </svg>
+    </button>
+  </div>
+  <div class="status" id="statusText">แตะไมค์เพื่อเริ่มฟังต่อเนื่อง</div>
+
+  <div class="panel src">
+    <div class="panel-head"><span class="dot"></span><span class="panel-label" id="srcLabel">English</span></div>
+    <div class="panel-text placeholder" id="srcText">ยังไม่มีข้อความ…</div>
+  </div>
+  <div class="flow-arrow">↓ แปลสด ↓</div>
+  <div class="panel out">
+    <div class="panel-head"><span class="dot"></span><span class="panel-label">ภาษาไทย</span></div>
+    <div class="panel-text placeholder" id="outText">คำแปลจะปรากฏที่นี่…</div>
+  </div>
+
+  <div class="controls">
+    <div class="toggle-row">
+      <div class="switch on" id="speakToggle"><div class="knob"></div></div>
+      <span class="toggle-label">อ่านออกเสียงคำแปล</span>
+    </div>
+    <button class="clear-btn" id="clearBtn">ล้างทั้งหมด</button>
+  </div>
+
+  <div class="history-head">
+    <span class="panel-label">ประวัติบทสนทนา</span>
+    <button id="copyBtn">คัดลอกทั้งหมด</button>
+  </div>
+  <div class="history" id="history">
+    <div class="h-empty">บทสนทนาจะบันทึกไว้ที่นี่ระหว่างใช้งาน</div>
+  </div>
+
+  <div class="footnote">
+    เชื่อมหูฟังไว้แล้วเปิดผ่าน Chrome · ต้องมีอินเทอร์เน็ตและอนุญาตไมโครโฟน · แตะภาษาให้ตรงกับผู้พูดก่อนแตะไมค์
+  </div>
+</div>
+
+<script>
+/* ---------- PWA install ---------- */
+const manifest = {
+  name: "ล่ามเสียง แปลเป็นไทย",
+  short_name: "ล่ามเสียง",
+  start_url: ".",
+  display: "standalone",
+  background_color: "#0B1120",
+  theme_color: "#0B1120",
+  icons: [{
+    src: "data:image/svg+xml," + encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230B1120'/><circle cx='50' cy='42' r='20' fill='%234CC9F0'/><rect x='46' y='62' width='8' height='16' rx='4' fill='%23F4A950'/></svg>`),
+    sizes: "100x100",
+    type: "image/svg+xml"
+  }]
+};
+try{
+  const manifestBlob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
+  const manifestURL = URL.createObjectURL(manifestBlob);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = manifestURL;
+  document.head.appendChild(link);
+}catch(e){}
+
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById('installBtn').style.display = 'inline-block';
+});
+document.getElementById('installBtn').addEventListener('click', async () => {
+  if(!deferredPrompt) return;
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+  document.getElementById('installBtn').style.display = 'none';
+});
+
+/* ---------- Elements ---------- */
+const micBtn = document.getElementById('micBtn');
+const stage = document.getElementById('stage');
+const statusText = document.getElementById('statusText');
+const srcText = document.getElementById('srcText');
+const outText = document.getElementById('outText');
+const srcLabel = document.getElementById('srcLabel');
+const speakToggle = document.getElementById('speakToggle');
+const clearBtn = document.getElementById('clearBtn');
+const chips = document.querySelectorAll('.chip');
+const autoToggle = document.getElementById('autoToggle');
+const historyEl = document.getElementById('history');
+const copyBtn = document.getElementById('copyBtn');
+
+let speakEnabled = true;
+let autoSwitch = false;
+let listening = false;
+let recognition = null;
+let translationQueue = [];
+let isTranslating = false;
+let noResultStrikes = 0;
+let currentLangIndex = 0;
+let historyLog = [];
+
+const langOrder = ['en-US','zh-CN','my-MM'];
+const langNames = { 'en-US':'English', 'zh-CN':'Chinese', 'my-MM':'Burmese' };
+
+function setActiveLang(lang, restart){
+  currentLangIndex = langOrder.indexOf(lang);
+  chips.forEach(c => c.classList.toggle('active', c.dataset.lang === lang));
+  srcLabel.textContent = langNames[lang];
+  noResultStrikes = 0;
+  if(recognition){
+    recognition.lang = lang;
+    if(restart && listening){
+      try{ recognition.stop(); }catch(e){}
+      // onend will restart it with the new lang
+    }
+  }
+}
+
+chips.forEach(chip => {
+  chip.addEventListener('click', () => setActiveLang(chip.dataset.lang, true));
+});
+
+autoToggle.addEventListener('click', () => {
+  autoSwitch = !autoSwitch;
+  autoToggle.classList.toggle('on', autoSwitch);
+});
+
+speakToggle.addEventListener('click', () => {
+  speakEnabled = !speakEnabled;
+  speakToggle.classList.toggle('on', speakEnabled);
+});
+
+clearBtn.addEventListener('click', () => {
+  srcText.textContent = 'ยังไม่มีข้อความ…'; srcText.classList.add('placeholder');
+  outText.textContent = 'คำแปลจะปรากฏที่นี่…'; outText.classList.add('placeholder');
+  historyLog = [];
+  renderHistory();
+});
+
+copyBtn.addEventListener('click', () => {
+  const text = historyLog.map(h => `[${h.lang}] ${h.src}\n→ ${h.out}`).join('\n\n');
+  if(!text){ return; }
+  navigator.clipboard?.writeText(text).then(() => {
+    copyBtn.textContent = 'คัดลอกแล้ว ✓';
+    setTimeout(() => copyBtn.textContent = 'คัดลอกทั้งหมด', 1500);
+  }).catch(()=>{});
+});
+
+function renderHistory(){
+  if(historyLog.length === 0){
+    historyEl.innerHTML = '<div class="h-empty">บทสนทนาจะบันทึกไว้ที่นี่ระหว่างใช้งาน</div>';
+    return;
+  }
+  historyEl.innerHTML = historyLog.slice().reverse().map(h => `
+    <div class="h-item">
+      <div class="h-src">${escapeHtml(h.src)}</div>
+      <div class="h-out">${escapeHtml(h.out)}</div>
+      <div class="h-meta">${h.lang} · ${h.time}</div>
+    </div>
+  `).join('');
+}
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+/* ---------- Speech recognition ---------- */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+if(!SpeechRecognition){
+  statusText.textContent = 'เบราว์เซอร์นี้ไม่รองรับการรู้จำเสียง ลองใช้ Chrome';
+  statusText.classList.add('err');
+  micBtn.disabled = true; micBtn.style.opacity = 0.4;
+} else {
+  recognition = new SpeechRecognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = langOrder[currentLangIndex];
+
+  recognition.onresult = (event) => {
+    noResultStrikes = 0;
+    let finalChunk = '', interim = '';
+    for(let i = event.resultIndex; i < event.results.length; i++){
+      const t = event.results[i][0].transcript;
+      if(event.results[i].isFinal) finalChunk += t; else interim += t;
+    }
+    if(finalChunk.trim()){
+      srcText.textContent = finalChunk.trim();
+      srcText.classList.remove('placeholder');
+      queueTranslation(finalChunk.trim(), langNames[langOrder[currentLangIndex]]);
+    } else if(interim.trim()){
+      srcText.textContent = interim.trim();
+      srcText.classList.remove('placeholder');
+    }
+  };
+
+  recognition.onerror = (event) => {
+    if(event.error === 'not-allowed' || event.error === 'service-not-allowed'){
+      statusText.textContent = 'กรุณาอนุญาตให้ใช้ไมโครโฟน';
+      statusText.classList.add('err');
+      stopListening();
+    } else if(event.error === 'no-speech'){
+      noResultStrikes++;
+      maybeAutoSwitch();
+    }
+    // other errors: swallow, onend will restart
+  };
+
+  recognition.onend = () => {
+    if(listening){
+      try{ recognition.start(); } catch(e){}
+    }
+  };
+}
+
+function maybeAutoSwitch(){
+  if(!autoSwitch || !listening) return;
+  if(noResultStrikes >= 3){
+    const next = langOrder[(currentLangIndex + 1) % langOrder.length];
+    setActiveLang(next, true);
+    statusText.textContent = 'สลับเป็น ' + langNames[next] + ' อัตโนมัติ…';
+  }
+}
+
+function startListening(){
+  if(!recognition) return;
+  recognition.lang = langOrder[currentLangIndex];
+  try{
+    recognition.start();
+    listening = true;
+    micBtn.classList.add('on');
+    stage.classList.add('listening');
+    statusText.classList.remove('err');
+    statusText.textContent = 'กำลังฟังต่อเนื่อง…';
+  } catch(e){}
+}
+
+function stopListening(){
+  listening = false;
+  if(recognition){ try{ recognition.stop(); }catch(e){} }
+  micBtn.classList.remove('on');
+  stage.classList.remove('listening');
+  if(!statusText.classList.contains('err')){
+    statusText.textContent = 'แตะไมค์เพื่อเริ่มฟังต่อเนื่อง';
+  }
+}
+
+micBtn.addEventListener('click', () => {
+  if(listening) stopListening(); else startListening();
+});
+
+/* ---------- Translation (queued, sequential for stability) ---------- */
+function queueTranslation(text, langName){
+  translationQueue.push({text, langName, time: new Date().toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})});
+  processQueue();
+}
+
+async function processQueue(){
+  if(isTranslating || translationQueue.length === 0) return;
+  isTranslating = true;
+  const job = translationQueue.shift();
+  outText.textContent = 'กำลังแปล…';
+  outText.classList.remove('placeholder');
+  statusText.classList.remove('err');
+
+  try{
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "claude-sonnet-4-6",
+        max_tokens: 800,
+        system: `You are a real-time speech interpreter. Translate the user's spoken ${job.langName} text into natural, conversational Thai, as a native Thai speaker would say it. Reply with ONLY the Thai translation, nothing else — no notes, no quotes, no explanations.`,
+        messages: [ { role: "user", content: job.text } ]
+      })
+    });
+    const data = await response.json();
+    const thaiText = (data.content || []).map(b => b.type === 'text' ? b.text : '').join('').trim();
+
+    if(thaiText){
+      outText.textContent = thaiText;
+      outText.classList.remove('placeholder');
+      historyLog.push({ src: job.text, out: thaiText, lang: job.langName, time: job.time });
+      renderHistory();
+      if(speakEnabled) speakThai(thaiText);
+    } else {
+      outText.textContent = 'แปลไม่สำเร็จ ลองพูดอีกครั้ง';
+    }
+  } catch(err){
+    statusText.textContent = 'เครือข่ายมีปัญหา กำลังลองใหม่…';
+    statusText.classList.add('err');
+    translationQueue.unshift(job); // retry this job
+    await new Promise(r => setTimeout(r, 1500));
+  } finally {
+    isTranslating = false;
+    processQueue();
+  }
+}
+
+function speakThai(text){
+  if(!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'th-TH';
+  const voices = window.speechSynthesis.getVoices();
+  const thaiVoice = voices.find(v => v.lang === 'th-TH') || voices.find(v => v.lang.startsWith('th'));
+  if(thaiVoice) utterance.voice = thaiVoice;
+  window.speechSynthesis.speak(utterance);
+}
+if('speechSynthesis' in window){
+  window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+}
+</script>
+</body>
+</html>

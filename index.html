@@ -382,7 +382,7 @@ if(!SpeechRecognition){
     if(finalChunk.trim()){
       srcText.textContent = finalChunk.trim();
       srcText.classList.remove('placeholder');
-      queueTranslation(finalChunk.trim(), langNames[langOrder[currentLangIndex]]);
+      queueTranslation(finalChunk.trim(), langNames[langOrder[currentLangIndex]], langOrder[currentLangIndex]);
     } else if(interim.trim()){
       srcText.textContent = interim.trim();
       srcText.classList.remove('placeholder');
@@ -445,8 +445,11 @@ micBtn.addEventListener('click', () => {
 });
 
 /* ---------- Translation (queued, sequential for stability) ---------- */
-function queueTranslation(text, langName){
-  translationQueue.push({text, langName, time: new Date().toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})});
+// Free translation endpoint (no API key needed) — works from any hosted site, unlike the Anthropic API.
+const translateCodeMap = { 'en-US': 'en', 'zh-CN': 'zh-CN', 'my-MM': 'my' };
+
+function queueTranslation(text, langName, langCode){
+  translationQueue.push({text, langName, langCode, time: new Date().toLocaleTimeString('th-TH', {hour:'2-digit', minute:'2-digit'})});
   processQueue();
 }
 
@@ -459,18 +462,11 @@ async function processQueue(){
   statusText.classList.remove('err');
 
   try{
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-6",
-        max_tokens: 800,
-        system: `You are a real-time speech interpreter. Translate the user's spoken ${job.langName} text into natural, conversational Thai, as a native Thai speaker would say it. Reply with ONLY the Thai translation, nothing else — no notes, no quotes, no explanations.`,
-        messages: [ { role: "user", content: job.text } ]
-      })
-    });
+    const sl = translateCodeMap[job.langCode] || 'auto';
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=th&dt=t&q=${encodeURIComponent(job.text)}`;
+    const response = await fetch(url);
     const data = await response.json();
-    const thaiText = (data.content || []).map(b => b.type === 'text' ? b.text : '').join('').trim();
+    const thaiText = (data[0] || []).map(seg => seg[0]).join('').trim();
 
     if(thaiText){
       outText.textContent = thaiText;
